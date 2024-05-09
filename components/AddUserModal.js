@@ -14,20 +14,31 @@ const AddUserModal = ({ visible, onClose, onAddUser }) => {
   const [fullname, setFullname] = useState("");
   const [password, setPassword] = useState("");
 
-  const handleAddUser = () => {
-    // Validate input fields here if needed
+  const handleAddUser = async ({ authToken, userData }) => {
+    try {
+      const config = { headers: { Authorization: `Bearer ${authToken}` } };
+      const response = await axios.post(
+        "https://nestme-server.onrender.com/api/admin/users",
+        userData,
+        config
+      );
 
-    // Call the onAddUser function with the new user data
-    onAddUser({ username, email, fullname, password });
-
-    // Clear input fields
-    setUsername("");
-    setEmail("");
-    setFullname("");
-    setPassword("");
-
-    // Close the modal
-    onClose();
+      // Kiểm tra phản hồi từ máy chủ
+      if (response.status === 200) {
+        console.log("User added successfully:", response.data);
+        // Thực hiện bất kỳ thao tác nào cần thiết sau khi thêm người dùng thành công
+        // Đóng modal sau khi thêm người dùng thành công
+        setIsAddUserModalVisible(false);
+        // Tải lại dữ liệu người dùng
+        fetchData();
+      } else {
+        console.error("Failed to add user:", response.data);
+        // Xử lý trường hợp không thêm được người dùng
+      }
+    } catch (error) {
+      console.error("Error adding user:", error);
+      // Xử lý lỗi khi gọi API để thêm người dùng
+    }
   };
 
   return (

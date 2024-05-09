@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   Image,
   Touchable,
   TextInput,
+  Animated,
 } from "react-native";
 import axios from "axios";
 import moment from "moment";
@@ -24,12 +25,47 @@ const ManageUsersScreen = () => {
   const [filterText, setFilterText] = useState(""); // State để lưu trữ giá trị của ô văn bản lọc
   const [totalPages, setTotalPages] = useState(1);
   const [isAddUserModalVisible, setIsAddUserModalVisible] = useState(false); // State to control modal visibility
+  const swipeableRef = useRef(null);
+  console.log(filterText);
+  const [animatePress, setAnimatePress] = useState(new Animated.Value(1));
 
+  const animateIn = () => {
+    Animated.timing(animatePress, {
+      toValue: 0.5,
+      duration: 500,
+      useNativeDriver: true, // Set useNativeDriver to true
+    }).start();
+  };
   // Function to add new user
-  const handleAddUser = (userData) => {
-    // Send API request to add user
-    console.log("New user data:", userData);
-    // Close the modal
+  const handleAddUser = async (userData) => {
+    try {
+      const accessToken = authToken;
+      const config = {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+      };
+      const response = await axios.post(
+        "https://nestme-server.onrender.com/api/admin/users",
+        userData,
+        config
+      );
+
+      if (response.status === 200) {
+        // Thông báo thành công và làm các bước cần thiết sau khi thêm người dùng
+        Alert.alert("Success", "User added successfully");
+        // Thực hiện bất kỳ thao tác nào cần thiết sau khi thêm người dùng thành công
+        fetchData(); // Tải lại dữ liệu người dùng
+      } else {
+        // Xử lý trường hợp không thêm được người dùng
+        Alert.alert("Error", "Failed to add user");
+      }
+    } catch (error) {
+      console.error("Error adding user:", error);
+      // Xử lý lỗi khi gọi API để thêm người dùng
+      Alert.alert("Error", "Failed to add user");
+    }
     setIsAddUserModalVisible(false);
   };
 
@@ -45,7 +81,69 @@ const ManageUsersScreen = () => {
 
   useEffect(() => {
     fetchData();
-  }, [currentPage, filterText]);
+  }, [currentPage, filterText, handleUnlockUser, handleLockUser]);
+
+  const handleLockUser = async (userId) => {
+    try {
+      const accessToken = authToken;
+      const config = { headers: { Authorization: `Bearer ${accessToken}` } };
+      const response = await axios.put(
+        `https://nestme-server.onrender.com/api/admin/user/ban/${userId}`,
+        null,
+        config
+      );
+      // Hiển thị cửa sổ cảnh báo
+      Alert.alert(
+        response.status === 200 ? "Success" : "Error",
+        response.status === 200
+          ? "User locked successfully"
+          : "Failed to lock user"
+      );
+      if (response.status === 200) {
+        console.log("User locked successfully");
+        // Thực hiện bất kỳ thao tác nào cần thiết sau khi khóa người dùng thành công
+        fetchData(); // Tải lại dữ liệu người dùng
+        swipeableRef.recenter();
+      } else {
+        console.error("Failed to lock user");
+        // Xử lý trường hợp không khóa được người dùng
+      }
+    } catch (error) {
+      console.error("Error locking user:", error);
+      // Xử lý lỗi khi gọi API để khóa người dùng
+    }
+  };
+
+  const handleUnlockUser = async (userId) => {
+    try {
+      const accessToken = authToken;
+      const config = { headers: { Authorization: `Bearer ${accessToken}` } };
+      const response = await axios.put(
+        `https://nestme-server.onrender.com/api/admin/user/unban/${userId}`,
+        null,
+        config
+      );
+      // Hiển thị cửa sổ cảnh báo
+      Alert.alert(
+        response.status === 200 ? "Success" : "Error",
+        response.status === 200
+          ? "User unlocked successfully"
+          : "Failed to unlock user"
+      );
+      if (response.status === 200) {
+        console.log("User unlocked successfully");
+        // Thực hiện bất kỳ thao tác nào cần thiết sau khi mở khóa người dùng thành công
+        fetchData(); // Tải lại dữ liệu người dùng
+        swipeableRef.recenter();
+      } else {
+        console.error("Failed to unlock user");
+        // Xử lý trường hợp không mở khóa được người dùng
+      }
+    } catch (error) {
+      console.error("Error unlocking user:", error);
+      // Xử lý lỗi khi gọi API để mở khóa người dùng
+    }
+  };
 
   const fetchData = async () => {
     try {
@@ -53,7 +151,7 @@ const ManageUsersScreen = () => {
       const accessToken = authToken;
       const config = { headers: { Authorization: `Bearer ${accessToken}` } };
       const response = await axios.get(
-        `https://nestme-server.onrender.com/api/admin/user?page=${currentPage}&limit=6&search=`,
+        `https://nestme-server.onrender.com/api/admin/user?page=${currentPage}&limit=6&search=${filterText}`,
         config
       );
       setAllUsers(response.data.users);
@@ -65,10 +163,10 @@ const ManageUsersScreen = () => {
     }
   };
 
-  const renderItemUser = ({ item, handleLockUser, handleUnlockUser }) => (
+  const renderItemUser = ({ item }) => (
     <Swipeable
       rightButtons={[
-        <TouchableOpacity onPress={() => handleLockUser(item.id)} key="lock">
+        <TouchableOpacity onPress={() => handleLockUser(item._id)} key="lock">
           <View style={styles.rightButton}>
             <Text style={styles.buttonText}>Lock</Text>
           </View>
@@ -76,7 +174,7 @@ const ManageUsersScreen = () => {
       ]}
       leftButtons={[
         <TouchableOpacity
-          onPress={() => handleUnlockUser(item.id)}
+          onPress={() => handleUnlockUser(item._id)}
           key="unlock"
         >
           <View style={styles.leftButton}>
@@ -84,6 +182,9 @@ const ManageUsersScreen = () => {
           </View>
         </TouchableOpacity>,
       ]}
+      ref={(ref) => {
+        swipeableRef.current = ref;
+      }}
     >
       <View style={styles.row}>
         <View style={styles.cell}>
@@ -400,5 +501,17 @@ const styles = StyleSheet.create({
   buttonText: {
     color: "white",
     fontWeight: "bold",
+  },
+  addButton: {
+    backgroundColor: "#007bff",
+    padding: 5,
+    borderRadius: 5,
+    marginTop: 10,
+    alignItems: "center",
+  },
+  addButtonLabel: {
+    color: "#fff",
+    fontWeight: "bold",
+    fontSize: 18,
   },
 });

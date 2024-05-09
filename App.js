@@ -72,6 +72,16 @@ const MainScreen = () => {
           ),
         }}
       />
+
+      <BottomTab.Screen
+        name="Logout"
+        component={LoginTest}
+        options={{
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="exit" color={color} size={size} />
+          ),
+        }}
+      />
     </BottomTab.Navigator>
   );
 };
