@@ -6,39 +6,68 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
+  Alert,
 } from "react-native";
+import { useSelector } from "react-redux";
+import axios from "axios";
 
 const AddUserModal = ({ visible, onClose, onAddUser }) => {
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [fullname, setFullname] = useState("");
   const [password, setPassword] = useState("");
+  const authToken = useSelector((state) => state.auth.userData);
 
-  const handleAddUser = async ({ authToken, userData }) => {
+  const handleAddUserClick = async () => {
     try {
-      const config = { headers: { Authorization: `Bearer ${authToken}` } };
+      if (!username || !email || !fullname || !password) {
+        Alert.alert("Error", "Please fill in all fields");
+        return;
+      }
+      const accessToken = authToken;
+      const config = {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+      };
+      const userData = {
+        username: username,
+        email: email,
+        fullname: fullname,
+        password: password,
+        admin: true,
+      };
       const response = await axios.post(
         "https://nestme-server.onrender.com/api/admin/users",
         userData,
         config
       );
-
-      // Kiểm tra phản hồi từ máy chủ
-      if (response.status === 200) {
-        console.log("User added successfully:", response.data);
-        // Thực hiện bất kỳ thao tác nào cần thiết sau khi thêm người dùng thành công
-        // Đóng modal sau khi thêm người dùng thành công
-        setIsAddUserModalVisible(false);
-        // Tải lại dữ liệu người dùng
-        fetchData();
+      if (response.status === 201) {
+        Alert.alert("Success", "User added successfully");
+        setUsername("");
+        setEmail("");
+        setFullname("");
+        setPassword("");
+      } else if (response.status === 422) {
+        Alert.alert("Error", response.data);
       } else {
-        console.error("Failed to add user:", response.data);
-        // Xử lý trường hợp không thêm được người dùng
+        Alert.alert("Error", "Something went wrong");
       }
     } catch (error) {
       console.error("Error adding user:", error);
-      // Xử lý lỗi khi gọi API để thêm người dùng
+      Alert.alert("Error", "Something went wrong");
     }
+  };
+
+  handleClose = async () => {
+    setUsername("");
+    setEmail("");
+    setFullname("");
+    setPassword("");
+    onClose();
   };
 
   return (
@@ -48,7 +77,10 @@ const AddUserModal = ({ visible, onClose, onAddUser }) => {
       visible={visible}
       onRequestClose={onClose}
     >
-      <View style={styles.modalContainer}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : null}
+        style={styles.modalContainer}
+      >
         <View style={styles.modalContent}>
           <Text style={styles.modalTitle}>Add User</Text>
           <View style={styles.inputContainer}>
@@ -68,6 +100,7 @@ const AddUserModal = ({ visible, onClose, onAddUser }) => {
               value={email}
               onChangeText={setEmail}
               keyboardType="email-address"
+              placeholderTextColor="black"
             />
           </View>
           <View style={styles.inputContainer}>
@@ -90,15 +123,18 @@ const AddUserModal = ({ visible, onClose, onAddUser }) => {
             />
           </View>
           <View style={styles.buttonContainer}>
-            <TouchableOpacity style={styles.addButton} onPress={handleAddUser}>
+            <TouchableOpacity
+              style={styles.addButton}
+              onPress={handleAddUserClick}
+            >
               <Text style={styles.buttonText}>Add</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.cancelButton} onPress={onClose}>
+            <TouchableOpacity style={styles.cancelButton} onPress={handleClose}>
               <Text style={styles.buttonText}>Cancel</Text>
             </TouchableOpacity>
           </View>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 };
@@ -111,6 +147,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     backgroundColor: "rgba(0, 0, 0, 0.5)",
+    height: 100, // Set the height to 400 pixels
   },
   modalContent: {
     backgroundColor: "white",
@@ -133,7 +170,7 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    borderColor: "#ccc",
+    color: "#000000",
     borderRadius: 5,
     padding: 10,
   },

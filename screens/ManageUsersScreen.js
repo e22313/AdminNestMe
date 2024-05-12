@@ -16,6 +16,7 @@ import moment from "moment";
 import { useSelector } from "react-redux";
 import AddUserModal from "../components/AddUserModal";
 import Swipeable from "react-native-swipeable";
+import ReportModal from "../components/ReportModal";
 const ManageUsersScreen = () => {
   const authToken = useSelector((state) => state.auth.userData);
   const [usersMostPost, setUsersMostPost] = useState([]);
@@ -26,9 +27,10 @@ const ManageUsersScreen = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [isAddUserModalVisible, setIsAddUserModalVisible] = useState(false); // State to control modal visibility
   const swipeableRef = useRef(null);
-  console.log(filterText);
   const [animatePress, setAnimatePress] = useState(new Animated.Value(1));
 
+  const [isReportModalVisible, setIsReportModalVisible] = useState(false);
+  const [id, setId] = useState({});
   const animateIn = () => {
     Animated.timing(animatePress, {
       toValue: 0.5,
@@ -36,37 +38,9 @@ const ManageUsersScreen = () => {
       useNativeDriver: true, // Set useNativeDriver to true
     }).start();
   };
-  // Function to add new user
-  const handleAddUser = async (userData) => {
-    try {
-      const accessToken = authToken;
-      const config = {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
-        },
-      };
-      const response = await axios.post(
-        "https://nestme-server.onrender.com/api/admin/users",
-        userData,
-        config
-      );
-
-      if (response.status === 200) {
-        // Thông báo thành công và làm các bước cần thiết sau khi thêm người dùng
-        Alert.alert("Success", "User added successfully");
-        // Thực hiện bất kỳ thao tác nào cần thiết sau khi thêm người dùng thành công
-        fetchData(); // Tải lại dữ liệu người dùng
-      } else {
-        // Xử lý trường hợp không thêm được người dùng
-        Alert.alert("Error", "Failed to add user");
-      }
-    } catch (error) {
-      console.error("Error adding user:", error);
-      // Xử lý lỗi khi gọi API để thêm người dùng
-      Alert.alert("Error", "Failed to add user");
-    }
+  const handleAddUser = async () => {
     setIsAddUserModalVisible(false);
+    return authToken;
   };
 
   // Function to close the modal
@@ -74,9 +48,19 @@ const ManageUsersScreen = () => {
     setIsAddUserModalVisible(false);
   };
 
+  const handleCloseModalReport = () => {
+    setIsReportModalVisible(false);
+  };
+
   // Function to open the modal
   const handleOpenModal = () => {
     setIsAddUserModalVisible(true);
+  };
+
+  const handleViewReport = (item) => {
+    setIsReportModalVisible(true);
+    setId(item?._id);
+    console.log("vailon " + item?._id);
   };
 
   useEffect(() => {
@@ -219,6 +203,11 @@ const ManageUsersScreen = () => {
           </Text>
         </View>
         <View style={styles.cell}>
+          {item.reports_count > 0 && (
+            <TouchableOpacity onPress={() => handleViewReport(item)}>
+              <Text style={styles.viewReportButton}>View Report</Text>
+            </TouchableOpacity>
+          )}
           <Text>{item.reports_count}</Text>
         </View>
       </View>
@@ -288,6 +277,11 @@ const ManageUsersScreen = () => {
         visible={isAddUserModalVisible}
         onClose={handleCloseModal}
         onAddUser={handleAddUser}
+      />
+      <ReportModal
+        visible={isReportModalVisible}
+        onClose={handleCloseModalReport}
+        id={id}
       />
       <View style={styles.header}>
         <View style={styles.headercontainer}>

@@ -16,7 +16,7 @@ import axios from "axios";
 import moment from "moment";
 import PostDetailsModal from "./PostDetailsModal";
 import { useSelector } from "react-redux";
-
+import ReportModalPost from "../components/ReportModalPost";
 const ManagePostsScreens = () => {
   const authToken = useSelector((state) => state.auth.userData);
   const [usersMostPost, setUsersMostPost] = useState([]);
@@ -31,7 +31,8 @@ const ManagePostsScreens = () => {
   const flatListRef = useRef(null);
   const [filterText, setFilterText] = useState(""); // State để lưu trữ giá trị của ô văn bản lọc
   const [totalPages, setTotalPages] = useState(1);
-  console.log(filterText);
+  const [isReportModalVisible, setIsReportModalVisible] = useState(false);
+  const [id, setId] = useState({});
   const openModal = (post) => {
     setSelectedPost(post);
     setModalVisible(true);
@@ -39,6 +40,9 @@ const ManagePostsScreens = () => {
 
   const closeModal = () => {
     setIsModalVisible(false);
+  };
+  const handleCloseModalReport = () => {
+    setIsReportModalVisible(false);
   };
 
   useEffect(() => {
@@ -97,6 +101,11 @@ const ManagePostsScreens = () => {
           <Text style={styles.cellText}>{item.visibility}</Text>
         </View>
         <View style={styles.cell}>
+          {item.reports_count > 0 && (
+            <TouchableOpacity onPress={() => handleViewReport(item)}>
+              <Text style={styles.viewReportButton}>View Report</Text>
+            </TouchableOpacity>
+          )}
           <Text>{item.reports_count}</Text>
         </View>
       </View>
@@ -183,6 +192,12 @@ const ManagePostsScreens = () => {
     return buttons;
   };
 
+  const handleViewReport = (item) => {
+    setIsReportModalVisible(true);
+    setId(item?._id);
+    console.log("vailon " + item?._id);
+  };
+
   return (
     <View style={styles.containerTableView}>
       <View style={styles.containerTableView}>
@@ -221,6 +236,11 @@ const ManagePostsScreens = () => {
           <Text style={styles.heading}>Reports</Text>
         </View>
       </View>
+      <ReportModalPost
+        visible={isReportModalVisible}
+        onClose={handleCloseModalReport}
+        id={id}
+      />
       <FlatList
         data={allPosts}
         keyExtractor={(item) => item._id}
